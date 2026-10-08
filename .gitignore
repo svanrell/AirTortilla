@@ -1,0 +1,29 @@
+# Compilación .NET & Rider / Visual Studio
+bin/
+obj/
+/packages/
+riderModule.iml
+/_ReSharper.Caches/
+.idea/
+*.user
+*.suo
+
+# Node.js & Next.js
+node_modules/
+.next/
+frontend/node_modules/
+frontend/.next/
+frontend/out/
+.env*.local
+
+# Sistema operativo
+.DS_Store
+Thumbs.db
+
+# ARCHIVOS CSV (Excluidos expresamente según requerimiento)
+*.csv
+**/*.csv
+backend/Archivos/*.csv
+backend/Archivos/**/*.csv
+backend/Archivos/SalidaAirTortilla/
+backend/Archivos/SalidaAirTortilla/*
