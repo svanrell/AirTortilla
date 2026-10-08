@@ -27,3 +27,5 @@ backend/Archivos/*.csv
 backend/Archivos/**/*.csv
 backend/Archivos/SalidaAirTortilla/
 backend/Archivos/SalidaAirTortilla/*
+AGENTS.md
+frontend/AGENTS.md
