@@ -98,7 +98,7 @@ Documentacion interactiva disponible en: `http://localhost:5000/swagger`
 | Caracteristica | Modalidad TOTAL | Modalidad LINEA A LINEA |
 | :--- | :--- | :--- |
 | **API C# Utilizada** | `File.WriteAllLines()` | `StreamReader` / `StreamWriter(..., append: true)` |
-| **Consumo de Memoria** | Temporal O(N) (Carga en RAM) | Constante O(1) (Independiente del tamano) |
+| **Consumo de Memoria** | Temporal O(N) (Carga en RAM) | Constante O(1) (Independiente del tamaño) |
 | **Escritura en Disco** | Atomica en bloque | Concurrente registro a registro |
 | **Caso de Uso Optimo** | Archivos pequenos y medianos | Archivos masivos / Big Data |
 | **Velocidad de E/S** | Maxima para lotes acotados | Continua y sin saturacion de memoria |
