@@ -31,11 +31,66 @@ Para cumplir los requisitos de la entrega, la base de datos corre sobre un conte
 * **Persistencia:** Usa el volumen `postgres_data` para que los datos no se borren aunque apagues o reinicies el contenedor.
 * **Autoinicialización:** Al arrancar por primera vez, Docker lee automáticamente el archivo [backend/Database/init.sql](file:///Users/shumi747/RiderProjects/EntregaFicheros/backend/Database/init.sql) y crea todas las tablas, índices y roles por defecto.
 
-### 2. Estructura de Tablas
-* **`roles`:** Guarda los permisos del sistema (`ADMINISTRADOR` y `EMPLEADO`).
-* **`usuarios`:** Guarda los usuarios del sistema. Las contraseñas se almacenan fuertemente encriptadas con **BCrypt** (nunca en texto plano).
-* **`logs_app`:** Tabla de auditoría y trazabilidad. Registra automáticamente cada acción relevante (logins correctos, intentos fallidos, altas de usuarios y migraciones).
-* **`reservas`:** Almacena todos los vuelos migrados desde el archivo CSV con índices para búsquedas rápidas por localizador, código y fecha.
+### 2. Estructura y Esquema Detallado de Tablas
+
+A continuación se detalla la definición de cada tabla definida en [init.sql](file:///Users/shumi747/RiderProjects/EntregaFicheros/backend/Database/init.sql):
+
+#### Tipos ENUM Creados
+* **`estado_rol`**: `'ACTIVO'`, `'INACTIVO'`, `'DEPRECADO'`
+* **`estado_usuario`**: `'ACTIVO'`, `'INACTIVO'`, `'SUSPENDIDO'`, `'PENDIENTE'`
+* **`tipo_evento_log`**: `'CREAR'`, `'ACTUALIZAR'`, `'BORRAR'`, `'INICIAR_SESION'`, `'CERRAR_SESION'`, `'ERROR_LOGIN'`, `'EXPORTAR'`, `'MIGRACION_CSV'`, `'FALLO_SISTEMA'`
+
+#### Tabla `roles` (Control de Acceso RBAC)
+Define los niveles de permisos de los usuarios en el sistema.
+| Campo | Tipo | Restricciones | Descripción |
+| :--- | :--- | :--- | :--- |
+| `id` | `INT` | `PRIMARY KEY`, `IDENTITY` | Identificador autoincremental de la clave primaria |
+| `nombre` | `VARCHAR(50)` | `NOT NULL`, `UNIQUE` | Nombre del rol (`ADMINISTRADOR`, `EMPLEADO`) |
+| `estado` | `estado_rol` | `NOT NULL`, `DEFAULT 'ACTIVO'` | Estado del rol |
+| `creado_en` | `TIMESTAMPTZ` | `NOT NULL`, `DEFAULT CURRENT_TIMESTAMP` | Fecha y hora de creación con zona horaria |
+
+#### Tabla `usuarios` (Autenticación y Credenciales US1 & US2)
+Almacena las cuentas de usuario y los hashes de contraseñas.
+| Campo | Tipo | Restricciones | Descripción |
+| :--- | :--- | :--- | :--- |
+| `id` | `INT` | `PRIMARY KEY`, `IDENTITY` | Identificador único del usuario |
+| `usuario` | `VARCHAR(100)` | `NOT NULL`, `UNIQUE` | Nombre de usuario único para login |
+| `contrasena` | `VARCHAR(255)` | `NOT NULL` | Contraseña cifrada mediante **BCrypt** con salt |
+| `rol_id` | `INT` | `NOT NULL`, `REFERENCES roles(id)` | Clave foránea al rol (`ON DELETE RESTRICT`) |
+| `estado` | `estado_usuario` | `NOT NULL`, `DEFAULT 'ACTIVO'` | Estado de la cuenta (activo, suspendido, etc.) |
+| `creado_en` | `TIMESTAMPTZ` | `NOT NULL`, `DEFAULT CURRENT_TIMESTAMP` | Fecha y hora de alta en el sistema |
+
+*Índices de rendimiento:* `idx_usuarios_rol_id` sobre la clave foránea `rol_id`.
+
+#### Tabla `logs_app` (Auditoría y Trazabilidad US3)
+Registra cada evento relevante para garantizar la trazabilidad de seguridad requerida.
+| Campo | Tipo | Restricciones | Descripción |
+| :--- | :--- | :--- | :--- |
+| `id` | `BIGINT` | `PRIMARY KEY`, `IDENTITY` | Identificador autoincremental de 64 bits para alta concurrencia |
+| `usuario_id` | `INT` | `NULLABLE`, `REFERENCES usuarios(id)` | Usuario responsable (`ON DELETE SET NULL` para conservar auditoría) |
+| `modulo_afectado`| `VARCHAR(100)`| `NOT NULL` | Módulo donde ocurrió (`Seguridad`, `MigradorCSV`, etc.) |
+| `tipo_evento` | `tipo_evento_log` | `NOT NULL` | Acción realizada (`INICIAR_SESION`, `ERROR_LOGIN`, `CREAR`, `MIGRACION_CSV`) |
+| `creado_en` | `TIMESTAMPTZ` | `NOT NULL`, `DEFAULT CURRENT_TIMESTAMP` | Timestamp exacto del evento |
+
+*Índices de rendimiento:* `idx_logs_app_usuario_id`, `idx_logs_app_creado_en` (orden descendente para consultas inmediatas).
+
+#### Tabla `reservas` (Migración de Vuelos desde CSV)
+Almacena los datos de los vuelos migrados desde el fichero plano.
+| Campo | Tipo | Restricciones | Descripción |
+| :--- | :--- | :--- | :--- |
+| `id` | `BIGINT` | `PRIMARY KEY`, `IDENTITY` | Identificador secuencial del registro |
+| `codigo_reserva` | `VARCHAR(50)` | `NOT NULL` | Código identificativo de la reserva |
+| `nombre_pasajero`| `VARCHAR(150)`| `NOT NULL` | Nombre y apellidos del pasajero |
+| `correo` | `VARCHAR(150)`| `NULLABLE` | Correo electrónico de contacto |
+| `origen` | `VARCHAR(50)` | `NOT NULL` | Ciudad / Aeropuerto de origen |
+| `destino` | `VARCHAR(50)` | `NOT NULL` | Ciudad / Aeropuerto de destino |
+| `pais_destino` | `VARCHAR(10)` | `NULLABLE` | Código ISO del país destino (ej. `FR`, `ES`) |
+| `numero_vuelo` | `VARCHAR(50)` | `NULLABLE` | Código de vuelo comercial |
+| `fecha_vuelo` | `DATE` | `NOT NULL` | Fecha programada del vuelo (`YYYY-MM-DD`) |
+| `localizador` | `VARCHAR(50)` | `NOT NULL` | Localizador compartido (para detectar pasajeros coincidentes) |
+| `creado_en` | `TIMESTAMPTZ` | `NOT NULL`, `DEFAULT CURRENT_TIMESTAMP` | Timestamp de inserción |
+
+*Índices de rendimiento:* `idx_reservas_localizador`, `idx_reservas_codigo`, `idx_reservas_fecha_vuelo`, `idx_reservas_pais_destino`.
 
 ### 3. Migración de Datos (CSV a PostgreSQL)
 * Desde la clase [backend/Database/MigradorCSV.cs](file:///Users/shumi747/RiderProjects/EntregaFicheros/backend/Database/MigradorCSV.cs) se leen las reservas del fichero maestro y se insertan en PostgreSQL usando una transacción atómica (*todo o nada*).
