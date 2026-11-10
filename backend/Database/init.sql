@@ -1,6 +1,4 @@
--- ==========================================
--- 1. TIPOS ENUM
--- ==========================================
+-- Tipos enumerados para restringir los valores permitidos en cada columna
 CREATE TYPE estado_rol AS ENUM ('ACTIVO', 'INACTIVO', 'DEPRECADO');
 CREATE TYPE estado_usuario AS ENUM ('ACTIVO', 'INACTIVO', 'SUSPENDIDO', 'PENDIENTE');
 CREATE TYPE tipo_evento_log AS ENUM (
@@ -11,13 +9,11 @@ CREATE TYPE tipo_evento_log AS ENUM (
     'CERRAR_SESION',
     'ERROR_LOGIN',
     'EXPORTAR',
-    'MIGRACION_CSV', -- Añadido útil para registrar cuándo importas el CSV
+    'MIGRACION_CSV',
     'FALLO_SISTEMA'
 );
 
--- ==========================================
--- 2. TABLA A: ROLES
--- ==========================================
+-- Tabla de roles para control de acceso (RBAC)
 CREATE TABLE roles (
     id INT GENERATED ALWAYS AS IDENTITY PRIMARY KEY,
     nombre VARCHAR(50) NOT NULL UNIQUE,
@@ -25,9 +21,7 @@ CREATE TABLE roles (
     creado_en TIMESTAMPTZ NOT NULL DEFAULT CURRENT_TIMESTAMP
 );
 
--- ==========================================
--- 3. TABLA B: USUARIOS
--- ==========================================
+-- Tabla de usuarios del sistema con contraseñas cifradas en BCrypt
 CREATE TABLE usuarios (
     id INT GENERATED ALWAYS AS IDENTITY PRIMARY KEY,
     usuario VARCHAR(100) NOT NULL UNIQUE,
@@ -37,9 +31,7 @@ CREATE TABLE usuarios (
     creado_en TIMESTAMPTZ NOT NULL DEFAULT CURRENT_TIMESTAMP
 );
 
--- ==========================================
--- 4. TABLA C: LOGS DE LA APLICACIÓN
--- ==========================================
+-- Tabla de trazabilidad y auditoría de seguridad
 CREATE TABLE logs_app (
     id BIGINT GENERATED ALWAYS AS IDENTITY PRIMARY KEY,
     usuario_id INT NULL REFERENCES usuarios(id) ON DELETE SET NULL,
@@ -48,9 +40,7 @@ CREATE TABLE logs_app (
     creado_en TIMESTAMPTZ NOT NULL DEFAULT CURRENT_TIMESTAMP
 );
 
--- ==========================================
--- 5. TABLA D: RESERVAS (Migración desde CSV)
--- ==========================================
+-- Tabla de reservas aéreas migradas desde el CSV
 CREATE TABLE reservas (
     id BIGINT GENERATED ALWAYS AS IDENTITY PRIMARY KEY,
     codigo_reserva VARCHAR(50) NOT NULL,
@@ -65,24 +55,19 @@ CREATE TABLE reservas (
     creado_en TIMESTAMPTZ NOT NULL DEFAULT CURRENT_TIMESTAMP
 );
 
--- ==========================================
--- 6. ÍNDICES DE RENDIMIENTO
--- ==========================================
+-- Índices para optimizar las consultas por clave foránea y fechas de auditoría
 CREATE INDEX idx_usuarios_rol_id ON usuarios(rol_id);
 CREATE INDEX idx_logs_app_usuario_id ON logs_app(usuario_id);
 CREATE INDEX idx_logs_app_creado_en ON logs_app(creado_en DESC);
 
--- Índices para búsquedas rápidas de reservas y vuelos
+-- Índices para agilizar la detección de localizadores coincidentes y filtros
 CREATE INDEX idx_reservas_localizador ON reservas(localizador);
 CREATE INDEX idx_reservas_codigo ON reservas(codigo_reserva);
 CREATE INDEX idx_reservas_fecha_vuelo ON reservas(fecha_vuelo);
 CREATE INDEX idx_reservas_pais_destino ON reservas(pais_destino);
 
--- ==========================================
--- 7. DATOS SEMILLA (Roles iniciales)
--- ==========================================
+-- Roles iniciales requeridos por la aplicación
 INSERT INTO roles (nombre) VALUES 
     ('ADMINISTRADOR'),
     ('EMPLEADO')
 ON CONFLICT (nombre) DO NOTHING;
-
