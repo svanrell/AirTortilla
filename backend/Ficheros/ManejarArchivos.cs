@@ -1,4 +1,4 @@
-namespace EjercicioFicheros;
+namespace EjercicioFicheros.Ficheros;
 
 public class ManejarArchivos
 {

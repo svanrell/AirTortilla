@@ -1,31 +1,62 @@
-# Compilación .NET & Rider / Visual Studio
-bin/
-obj/
-/packages/
-riderModule.iml
-/_ReSharper.Caches/
-.idea/
+# ==============================================================================
+# .gitignore - AirTortilla (.NET 8 & Next.js)
+# ==============================================================================
+
+# Compilación y artefactos .NET / C#
+[Bb]in/
+[Oo]bj/
+[Pp]ackages/
+_ReSharper.Caches/
 *.user
 *.suo
+*.userosscache
+*.sln.docstates
 
-# Node.js & Next.js
+# Entornos de desarrollo e IDEs (Rider, Visual Studio, VS Code)
+.idea/
+.vscode/
+riderModule.iml
+
+# Node.js, Next.js y Frontend
 node_modules/
 .next/
 frontend/node_modules/
 frontend/.next/
 frontend/out/
-.env*.local
+frontend/build/
+*.tsbuildinfo
+next-env.d.ts
 
-# Sistema operativo
+# Variables de entorno y secretos locales
+.env
+.env.local
+.env.*.local
+backend/appsettings.*.local.json
+
+# Logs y depuración
+*.log
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+
+# Sistema operativo (macOS, Windows, Linux)
 .DS_Store
+**/.DS_Store
+._*
+**/*._*
 Thumbs.db
+*.swp
+*.swo
+*~
 
-# ARCHIVOS CSV (Excluidos expresamente según requerimiento)
+# ARCHIVOS CSV (Excluidos expresamente según el requerimiento de la entrega)
 *.csv
 **/*.csv
 backend/Archivos/*.csv
 backend/Archivos/**/*.csv
 backend/Archivos/SalidaAirTortilla/
 backend/Archivos/SalidaAirTortilla/*
+
+# Documentos internos de agentes / AI
 AGENTS.md
 frontend/AGENTS.md

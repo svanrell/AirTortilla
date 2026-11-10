@@ -1,11 +1,15 @@
 "use client";
 
 import React, { useState, useEffect, useCallback, useMemo } from "react";
-import Header from "@/components/Header";
+import Header, { ViewType } from "@/components/Header";
 import ViewReservas from "@/components/views/ViewReservas";
 import ViewCoincidentes from "@/components/views/ViewCoincidentes";
 import ViewGenerarFicheros from "@/components/views/ViewGenerarFicheros";
 import ViewVisorCSV from "@/components/views/ViewVisorCSV";
+import ViewUsuarios from "@/components/views/ViewUsuarios";
+import ViewAuditoria from "@/components/views/ViewAuditoria";
+import LoginModal from "@/components/LoginModal";
+import LoginScreen from "@/components/LoginScreen";
 import {
   getReservas,
   getCasosCoincidentes,
@@ -13,7 +17,7 @@ import {
   getContenidoFichero,
   checkApiHealth,
 } from "@/lib/api";
-import { Reserva, CasoCoincidente, FicheroContenido } from "@/types";
+import { Reserva, CasoCoincidente, FicheroContenido, UsuarioAuth } from "@/types";
 import {
   AlertTriangle,
   FileCode2,
@@ -26,14 +30,53 @@ import {
   Clock,
 } from "lucide-react";
 
-export type ViewType = "reservas" | "coincidentes" | "generador" | "visor";
-
 export default function Home() {
   const [currentView, setCurrentView] = useState<ViewType>("reservas");
   const [isBackendLive, setIsBackendLive] = useState<boolean>(false);
   const [isStale, setIsStale] = useState<boolean>(false);
   const [lastSyncTime, setLastSyncTime] = useState<string | null>(null);
   const [loading, setLoading] = useState<boolean>(true);
+
+  // Estado de Autenticación (US1)
+  const [currentUser, setCurrentUser] = useState<UsuarioAuth | null>(null);
+  const [authLoaded, setAuthLoaded] = useState<boolean>(false);
+  const [isLoginModalOpen, setIsLoginModalOpen] = useState<boolean>(false);
+
+  // Cargar usuario persistido en localStorage al montar
+  useEffect(() => {
+    try {
+      const stored = localStorage.getItem("airtortilla_user");
+      if (stored) {
+        setCurrentUser(JSON.parse(stored));
+      }
+    } catch {
+      // Ignorar fallo de parseo
+    } finally {
+      setAuthLoaded(true);
+    }
+  }, []);
+
+  const handleLoginSuccess = (user: UsuarioAuth) => {
+    setCurrentUser(user);
+    try {
+      localStorage.setItem("airtortilla_user", JSON.stringify(user));
+    } catch {
+      // Ignorar fallo de almacenamiento
+    }
+  };
+
+  const handleLogout = () => {
+    setCurrentUser(null);
+    try {
+      localStorage.removeItem("airtortilla_user");
+    } catch {
+      // Ignorar
+    }
+    // Si estaba en una vista de admin, devolver a reservas
+    if (currentView === "usuarios" || currentView === "auditoria") {
+      setCurrentView("reservas");
+    }
+  };
 
   // Estados de datos crudos
   const [rawReservas, setRawReservas] = useState<Reserva[]>([]);
@@ -117,7 +160,14 @@ export default function Home() {
   };
 
   useEffect(() => {
-    loadAllData();
+    if (currentUser) {
+      loadAllData();
+    }
+  }, [currentUser, loadAllData]);
+
+  useEffect(() => {
+    // Comprobar estado inicial del backend
+    checkApiHealth().then(setIsBackendLive);
 
     // Heartbeat cada 10 segundos para comprobar si el backend sigue vivo
     const interval = setInterval(async () => {
@@ -133,7 +183,29 @@ export default function Home() {
     }, 10000);
 
     return () => clearInterval(interval);
-  }, [loadAllData, rawReservas.length]);
+  }, [rawReservas.length]);
+
+  // Pantalla de carga mientras se recupera la sesión
+  if (!authLoaded) {
+    return (
+      <div className="min-h-screen bg-[#060913] flex items-center justify-center text-slate-400">
+        <div className="flex flex-col items-center gap-3">
+          <div className="w-8 h-8 border-2 border-cyan-400 border-t-transparent rounded-full animate-spin" />
+          <span className="text-xs font-mono">Verificando credenciales de acceso...</span>
+        </div>
+      </div>
+    );
+  }
+
+  // BARRERA DE SEGURIDAD (US1): Si no ha iniciado sesión, mostrar la pantalla de Login
+  if (!currentUser) {
+    return (
+      <LoginScreen
+        onLoginSuccess={handleLoginSuccess}
+        isBackendLive={isBackendLive}
+      />
+    );
+  }
 
   return (
     <div className="min-h-screen bg-[#070a12] text-slate-100 flex flex-col font-sans selection:bg-sky-500 selection:text-slate-950 relative overflow-x-hidden">
@@ -152,6 +224,9 @@ export default function Home() {
           onSelectView={setCurrentView}
           isBackendLive={isBackendLive}
           isStale={isStale}
+          currentUser={currentUser}
+          onOpenLogin={() => setIsLoginModalOpen(true)}
+          onLogout={handleLogout}
         />
       </div>
 
@@ -346,8 +421,26 @@ export default function Home() {
               onRefresh={loadAllData}
             />
           )}
+
+          {currentView === "usuarios" && (
+            <ViewUsuarios
+              currentUser={currentUser}
+              onRefreshData={loadAllData}
+            />
+          )}
+
+          {currentView === "auditoria" && (
+            <ViewAuditoria />
+          )}
         </div>
       </main>
+
+      {/* Modal de Autenticación (US1) */}
+      <LoginModal
+        isOpen={isLoginModalOpen}
+        onClose={() => setIsLoginModalOpen(false)}
+        onLoginSuccess={handleLoginSuccess}
+      />
 
       {/* Footer estilo táctico LoadoutAI */}
       <footer className="relative z-10 border-t border-slate-800/80 bg-slate-950/90 py-6 px-4 sm:px-8 mt-12 backdrop-blur-lg">

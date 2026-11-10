@@ -1,196 +1,157 @@
 <div align="center">
 
-# AIRTORTILLA - FLIGHT OPS CONTROL
+# AIRTORTILLA - FLIGHT OPERATIONS & DATABASE
 
-**Sistema Integral de Procesamiento de Reservas Aereas, Deteccion de Pasajeros Coincidentes y Particion de Archivos CSV**
+**Sistema de Procesamiento de Reservas, Detección de Pasajeros Coincidentes, Base de Datos Relacional y Seguridad**
 
 [![.NET 8.0](https://img.shields.io/badge/.NET-8.0-512BD4?style=for-the-badge&logo=dotnet&logoColor=white)](https://dotnet.microsoft.com/)
+[![PostgreSQL 16](https://img.shields.io/badge/PostgreSQL-16-336791?style=for-the-badge&logo=postgresql&logoColor=white)](https://www.postgresql.org/)
+[![Docker](https://img.shields.io/badge/Docker-Compose-2496ED?style=for-the-badge&logo=docker&logoColor=white)](https://www.docker.com/)
 [![Next.js 16](https://img.shields.io/badge/Next.js-16-000000?style=for-the-badge&logo=next.js&logoColor=white)](https://nextjs.org/)
-[![React 19](https://img.shields.io/badge/React-19-61DAFB?style=for-the-badge&logo=react&logoColor=black)](https://react.dev/)
-[![Tailwind CSS](https://img.shields.io/badge/Tailwind-CSS-38B2AC?style=for-the-badge&logo=tailwind-css&logoColor=white)](https://tailwindcss.com/)
-[![Swagger](https://img.shields.io/badge/Swagger-OpenAPI_3.0-85EA2D?style=for-the-badge&logo=swagger&logoColor=black)](http://localhost:5000/swagger)
-
-<p align="center">
-  <a href="#caracteristicas-principales">Caracteristicas</a> •
-  <a href="#arquitectura-del-sistema">Arquitectura</a> •
-  <a href="#endpoints-del-backend">API Endpoints</a> •
-  <a href="#instalacion-y-despliegue">Instalacion</a> •
-  <a href="#modalidades-de-particion">Modalidades C#</a> •
-  <a href="#estructura-del-proyecto">Estructura</a>
-</p>
 
 </div>
 
 ---
 
-## Descripcion General
+## ¿De qué trata el proyecto?
 
-AirTortilla es una plataforma integral desarrollada para resolver el procesamiento de volumenes de reservas de vuelo. Combina un motor de alto rendimiento en C# (.NET 8 ASP.NET Core Minimal APIs) con un panel de control interactivo en Next.js y React disenado con una interfaz modular de operaciones.
+AirTortilla es una aplicación desarrollada en **C# (.NET 8)** y **Next.js** para gestionar reservas aéreas. En esta entrega se han resuelto dos grandes objetivos:
 
-El sistema resuelve la lectura, validacion y particion automatizada de billetes internacionales, agrupando reservas por destino y fecha mientras aplica reglas de negocio como la asignacion de localizadores de grupo compartidos a pasajeros con reservas multiples.
-
----
-
-## Caracteristicas Principales
-
-### 1. Particion Automatizada por Pais y Fecha
-- Divide el fichero maestro de reservas en archivos individuales siguiendo el patron:
-  ```text
-  AirTortilla_XX_AAAA_MM_DD.csv  (Ej: AirTortilla_FR_2024_10_15.csv)
-  ```
-- Generacion de cabecera estandar y delimitacion estricta por punto y coma (`;`).
-
-### 2. Deteccion de Pasajeros Coincidentes
-- Agrupa reservas con identico Nombre, Origen y Destino.
-- Asigna un Localizador Comun de Grupo (ej. `LOC-FR-5X01`) compartiendo el trayecto, manteniendo un Ticket ID univoco por cada billete individual.
-- Deteccion de grupos de 5 o mas reservas repetidas.
-
-### 3. Doble Estrategia de Persistencia en Disco
-- **Modalidad TOTAL:** Agrupacion en memoria RAM mediante `Dictionary<string, List<string>>` y escritura en bloque con `File.WriteAllLines`.
-- **Modalidad LINEA A LINEA:** Lectura y escritura en flujo continuo (*streaming*) con `StreamWriter(..., append: true)` y memoria constante O(1).
-
-### 4. Panel de Control Web (Frontend)
-- **Vista de Reservas:** Filtros instantaneos por pais de destino, buscador en tiempo real y metricas operativas.
-- **Vista de Casos Coincidentes:** Tarjetas de expediente con monogramas de pasajero, rutas y accion de copia rapida de localizador.
-- **Consola de Ejecucion:** Terminal interactiva que muestra los registros de ejecucion del backend en tiempo real.
-- **Visor CSV:** Alterna entre tabla relacional formateada y texto en bruto con opcion de copia y descarga directa del archivo.
-- **Resiliencia de Conexion:** Heartbeat activo que retiene los ultimos datos validos en caso de caida del servidor, informando de la desactualizacion sin generar datos simulados.
+1. **Gestión de Ficheros CSV:** Lectura, partición automatizada de vuelos por país/fecha (modalidades en memoria y en streaming) y agrupación de pasajeros con reservas repetidas.
+2. **Migración a Base de Datos Relacional y Seguridad:** Sustitución de los datos planos por **PostgreSQL 16 en Docker**, control de identidades con contraseñas encriptadas (**BCrypt**), permisos por roles y registro de auditoría.
 
 ---
 
-## Arquitectura del Sistema
+## Base de Datos (PostgreSQL en Docker)
 
-```mermaid
-flowchart TD
-    A["reservas_airtortilla.csv"] -->|"Lectura CSV"| B["Backend (.NET 8 Web API)"]
-    B -->|"GET /api/reservas"| C["Frontend (Next.js 16)"]
-    B -->|"GET /api/pasajeros/coincidentes"| C
-    B -->|"GET /api/health"| C
-    C -->|"POST /api/ficheros/generar-total"| B
-    C -->|"POST /api/ficheros/generar-linea"| B
-    B -->|"Generacion de Archivos"| D["backend/Archivos/SalidaAirTortilla/"]
-    D -->|"Lectura de Ficheros"| B
-    B -->|"GET /api/ficheros/:nombre"| C
-```
+Para cumplir los requisitos de la entrega, la base de datos corre sobre un contenedor Docker y se autoconfigura al encenderse:
 
----
+### 1. Despliegue con Docker Compose
+* Se levanta con el archivo [compose.yml](file:///Users/shumi747/RiderProjects/EntregaFicheros/compose.yml).
+* **Persistencia:** Usa el volumen `postgres_data` para que los datos no se borren aunque apagues o reinicies el contenedor.
+* **Autoinicialización:** Al arrancar por primera vez, Docker lee automáticamente el archivo [backend/Database/init.sql](file:///Users/shumi747/RiderProjects/EntregaFicheros/backend/Database/init.sql) y crea todas las tablas, índices y roles por defecto.
 
-## Endpoints del Backend
+### 2. Estructura de Tablas
+* **`roles`:** Guarda los permisos del sistema (`ADMINISTRADOR` y `EMPLEADO`).
+* **`usuarios`:** Guarda los usuarios del sistema. Las contraseñas se almacenan fuertemente encriptadas con **BCrypt** (nunca en texto plano).
+* **`logs_app`:** Tabla de auditoría y trazabilidad. Registra automáticamente cada acción relevante (logins correctos, intentos fallidos, altas de usuarios y migraciones).
+* **`reservas`:** Almacena todos los vuelos migrados desde el archivo CSV con índices para búsquedas rápidas por localizador, código y fecha.
 
-El backend expone una API REST documentada interactivamente mediante Swagger UI:
-
-| Metodo | Endpoint | Etiqueta | Descripcion |
-| :---: | :--- | :---: | :--- |
-| `GET` | `/api/health` | `Health` | Heartbeat de comprobacion de estado del servidor |
-| `GET` | `/api/reservas` | `Reservas` | Devuelve el catalogo de las reservas parseadas |
-| `GET` | `/api/pasajeros/coincidentes` | `Pasajeros` | Agrupa y devuelve los casos de reservas coincidentes |
-| `POST` | `/api/ficheros/generar-total` | `Ficheros` | Ejecuta la generacion en bloque en memoria (File.WriteAllLines) |
-| `POST` | `/api/ficheros/generar-linea` | `Ficheros` | Ejecuta la generacion en flujo continuo (StreamWriter append) |
-| `GET` | `/api/ficheros` | `Ficheros` | Lista los archivos .csv generados en la carpeta de salida |
-| `GET` | `/api/ficheros/{nombreFichero}` | `Ficheros` | Lee y devuelve las lineas de un archivo CSV especifico |
-
-Documentacion interactiva disponible en: `http://localhost:5000/swagger`
+### 3. Migración de Datos (CSV a PostgreSQL)
+* Desde la clase [backend/Database/MigradorCSV.cs](file:///Users/shumi747/RiderProjects/EntregaFicheros/backend/Database/MigradorCSV.cs) se leen las reservas del fichero maestro y se insertan en PostgreSQL usando una transacción atómica (*todo o nada*).
+* Al finalizar, el sistema registra automáticamente el evento `MIGRACION_CSV` en la tabla de logs.
 
 ---
 
-## Modalidades de Particion: Comparativa Tecnica
+## Mejoras Implementadas (Seguridad y Funcionalidades)
 
-| Caracteristica | Modalidad TOTAL | Modalidad LINEA A LINEA |
-| :--- | :--- | :--- |
-| **API C# Utilizada** | `File.WriteAllLines()` | `StreamReader` / `StreamWriter(..., append: true)` |
-| **Consumo de Memoria** | Temporal O(N) (Carga en RAM) | Constante O(1) (Independiente del tamaño) |
-| **Escritura en Disco** | Atomica en bloque | Concurrente registro a registro |
-| **Caso de Uso Optimo** | Archivos pequenos y medianos | Archivos masivos / Big Data |
-| **Velocidad de E/S** | Maxima para lotes acotados | Continua y sin saturacion de memoria |
+### 1. Bloqueo de Acceso Inicial y Login Obligatorio (US1)
+* La aplicación no muestra ningún dato de reservas ni operativa hasta que el usuario se haya autenticado.
+* Si no has iniciado sesión, verás una **pantalla de acceso corporativo** pidiendo usuario y contraseña.
 
----
+### 2. Encriptación Criptográfica con BCrypt
+* Usamos la librería `BCrypt.Net-Next`.
+* Al crear un usuario, su contraseña se combina con un Salt aleatorio y se genera un hash seguro (`$2a$11$...`). Al hacer login se comprueba en tiempo constante sin exponer la clave.
+* Todas las consultas SQL están protegidas con parámetros contra inyecciones SQL (*SQL Injection*).
 
-## Instalacion y Despliegue
+### 3. Permisos según el Rol (RBAC) (US2)
+* **Empleado:** Puede ver el panel de vuelos, reservas, casos coincidentes y el visor de CSV.
+* **Administrador:** Además de lo anterior, se le desbloquean dos secciones exclusivas:
+  * **Usuarios:** Formulario para dar de alta empleados o nuevos administradores y botón para forzar la sincronización de la base de datos.
+  * **Trazabilidad:** Visor en tiempo real con todos los registros de auditoría y filtros por tipo de evento.
 
-### Requisitos Previos
-- .NET 8.0 SDK
-- Node.js 18+ y npm
-
-### 1. Clonar el repositorio
-```bash
-git clone https://github.com/svanrell/AirTortilla.git
-cd AirTortilla
-```
-
-### 2. Iniciar el Backend (.NET 8 Web API)
-```bash
-dotnet run --project backend/EjercicioFicheros.csproj
-```
-El servidor estara disponible en:
-- API URL: `http://localhost:5000`
-- Swagger UI: `http://localhost:5000/swagger`
-
-### 3. Iniciar el Frontend (Next.js 16)
-En una nueva terminal:
-```bash
-cd frontend
-npm install
-npm run dev
-```
-La aplicacion web estara disponible en:
-- Dashboard Web: `http://localhost:3000`
+### 4. Trazabilidad de Modificaciones y Seguridad (US3)
+* Cada acción queda registrada de forma permanente en la base de datos:
+  * `INICIAR_SESION`: Acceso con éxito.
+  * `ERROR_LOGIN`: Intentos fallidos (útil para detectar ataques de fuerza bruta).
+  * `CREAR`: Creación de un nuevo usuario.
+  * `MIGRACION_CSV`: Ejecución de la carga de reservas.
 
 ---
 
-## Estructura del Proyecto
+## Estructura del Backend (Organizado por Módulos)
+
+El código de C# está organizado de forma natural en carpetas temáticas según su función:
 
 ```text
-AirTortilla/
-├── backend/                               # Proyecto ASP.NET Core 8 Web API
-│   ├── EjercicioFicheros.csproj           # Configuracion del proyecto y paquetes NuGet
-│   ├── Program.cs                         # Endpoints Minimal API, CORS y Swagger
-│   ├── ManejarCSV.cs                      # Logica de particion TOTAL y LINEA A LINEA
-│   ├── ManejarArchivos.cs                 # Resolucion dinamica de rutas del sistema
-│   ├── FormatearCSV.cs                    # Normalizacion y serializacion CSV
-│   ├── Reserva.cs                         # Modelo de datos de Reserva
-│   ├── Persona.cs                         # Modelo de datos de Pasajero
-│   └── Archivos/                          # Almacenamiento local (CSVs excluidos en Git)
-│       └── SalidaAirTortilla/             # Directorio de salida de los CSVs generados
+backend/
+├── appsettings.json               # Configuración oficial con la cadena de conexión
+├── Program.cs                     # Inicio del servidor y mapeo modular de rutas
+├── EjercicioFicheros.csproj
 │
-├── frontend/                              # Dashboard Next.js con Tailwind CSS
-│   ├── src/
-│   │   ├── app/
-│   │   │   ├── layout.tsx                 # Layout principal
-│   │   │   ├── page.tsx                   # Ensamblador de vistas y sincronizacion API
-│   │   │   └── globals.css                # Tokens de diseno y estilos
-│   │   ├── components/
-│   │   │   ├── Header.tsx                 # Barra superior de navegacion y estado API
-│   │   │   └── views/
-│   │   │       ├── ViewReservas.tsx        # Tabla de vuelos con buscador y filtros
-│   │   │       ├── ViewCoincidentes.tsx    # Tarjetas de casos con localizador comun
-│   │   │       ├── ViewGenerarFicheros.tsx # Consola terminal y disparadores C#
-│   │   │       └── ViewVisorCSV.tsx        # Inspector y parseador interactivo de CSV
-│   │   ├── lib/
-│   │   │   └── api.ts                     # Cliente HTTP con cache y resiliencia Stale
-│   │   └── types/
-│   │       └── index.ts                   # Interfaces TypeScript sincronizadas con C#
-│   └── package.json
+├── Database/                      # Todo lo relativo a PostgreSQL
+│   ├── init.sql                   # Script de creación de tablas montado en Docker
+│   ├── ConfiguracionBD.cs         # Lee la conexión de appsettings.json
+│   └── MigradorCSV.cs             # Lógica de migración del CSV a la base de datos
 │
-├── .gitignore                             # Exclusion estricta de CSVs y compilados
-├── EntregaFicheros.sln                    # Solucion .NET
-└── README.md                              # Documentacion del proyecto
+├── Ficheros/                      # Manejo y partición de archivos CSV
+│   ├── ManejarArchivos.cs         # Rutas dinámicas del sistema
+│   ├── ManejarCSV.cs              # Modalidades TOTAL (RAM) y LÍNEA A LÍNEA (Stream)
+│   ├── FormatearCSV.cs            # Serialización y parseo de líneas CSV
+│   └── RutasFicheros.cs           # Endpoints de generación y consulta de ficheros
+│
+├── Reservas/                      # Dominio de reservas y pasajeros
+│   ├── Reserva.cs                 # Objeto de reserva
+│   ├── Persona.cs                 # Objeto de pasajero
+│   └── RutasReservas.cs           # Endpoints de reservas y casos coincidentes
+│
+├── Seguridad/                     # Control de acceso y auditoría
+│   ├── Login.cs                   # Lógica de login, alta con BCrypt y logs
+│   └── RutasSeguridad.cs          # Endpoints de autenticación y trazabilidad
+│
+└── Archivos/                      # Directorio local de CSVs
+    ├── reservas_airtortilla.csv
+    └── SalidaAirTortilla/         # Archivos particionados resultantes
 ```
 
 ---
 
-## Exclusion de Datos Sensibles (.gitignore)
-Por politica del proyecto, ningun archivo de datos .csv se incluye en el repositorio de control de versiones:
-```gitignore
-*.csv
-**/*.csv
-backend/Archivos/*.csv
-backend/Archivos/SalidaAirTortilla/
-```
+## Endpoints de la API
+
+La documentación interactiva con Swagger está disponible en: `http://localhost:5000/swagger`
+
+| Método | Endpoint | Módulo | Descripción |
+| :---: | :--- | :---: | :--- |
+| `POST` | `/api/auth/login` | Seguridad | Valida credenciales con BCrypt y devuelve el rol (US1) |
+| `POST` | `/api/admin/usuarios` | Seguridad | Da de alta usuarios asignando rol y encriptando clave (US2) |
+| `GET` | `/api/admin/logs` | Seguridad | Lista los registros de auditoría y accesos (US3) |
+| `POST` | `/api/migracion/csv-a-bd` | Ficheros | Ejecuta la migración del archivo CSV a PostgreSQL |
+| `GET` | `/api/reservas` | Reservas | Devuelve las reservas cargadas |
+| `GET` | `/api/pasajeros/coincidentes`| Reservas | Agrupa pasajeros con mismo trayecto y fechas |
+| `POST` | `/api/ficheros/generar-total` | Ficheros | Partición en bloque usando memoria RAM (WriteAllLines) |
+| `POST` | `/api/ficheros/generar-linea` | Ficheros | Partición en flujo continuo (StreamWriter append) |
+| `GET` | `/api/ficheros` | Ficheros | Lista los ficheros .csv creados en disco |
+| `GET` | `/api/ficheros/{nombre}` | Ficheros | Consulta el contenido de un CSV generado |
+| `GET` | `/api/health` | Sistema | Comprueba que la API está encendida |
 
 ---
 
-<div align="center">
+## Cómo Ponerlo en Marcha
 
-AirTortilla Flight Operations System.
+### 1. Iniciar la Base de Datos
+En la raíz del proyecto:
+```bash
+docker compose up -d
+```
+*(PostgreSQL estará corriendo en `localhost:5432` con la base de datos `mydb` inicializada).*
 
-</div>
+### 2. Iniciar el Backend (.NET 8)
+En una terminal:
+```bash
+dotnet run --project backend
+```
+*(La API estará disponible en `http://localhost:5000` y Swagger en `/swagger`).*
+
+### 3. Iniciar el Frontend (Next.js)
+En otra terminal:
+```bash
+cd frontend
+npm run dev
+```
+*(Abre `http://localhost:3000` en tu navegador).*
+
+---
+
+### Cuentas para Probar la Aplicación:
+* **Administrador:** Usuario `admin` | Contraseña `Admin123!` *(Desbloquea Usuarios y Trazabilidad)*
+* **Empleado:** Usuario `empleado1` | Contraseña `Vuelo2024!` *(Acceso a la operativa de vuelos)*

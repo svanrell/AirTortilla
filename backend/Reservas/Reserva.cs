@@ -1,4 +1,4 @@
-namespace EjercicioFicheros;
+namespace EjercicioFicheros.Reservas;
 
 public class Reserva
 {

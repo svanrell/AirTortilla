@@ -1,4 +1,6 @@
-namespace EjercicioFicheros;
+using EjercicioFicheros.Reservas;
+
+namespace EjercicioFicheros.Ficheros;
 
 public class FormatearCsv
 {

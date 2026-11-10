@@ -1,6 +1,6 @@
-import { Reserva, CasoCoincidente, FicheroContenido } from "@/types";
+import { Reserva, CasoCoincidente, FicheroContenido, LoginResponse, LogItem } from "@/types";
 
-export const API_BASE_URL = "http://localhost:5000/api";
+export const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || "http://localhost:5000/api";
 
 export interface FetchResult<T> {
   data: T;
@@ -235,4 +235,87 @@ export async function getContenidoFichero(nombreFichero: string): Promise<Ficher
     console.warn(`Error leyendo fichero ${nombreFichero}:`, err);
   }
   return null;
+}
+
+// ============================================================
+// 7. AUTENTICACIÓN Y SEGURIDAD (US1, US2, US3)
+// ============================================================
+
+// US1: Iniciar Sesión (POST /api/auth/login)
+export async function loginApi(usuario: string, contrasena: string): Promise<LoginResponse> {
+  try {
+    const res = await fetch(`${API_BASE_URL}/auth/login`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ usuario, contrasena }),
+    });
+    return await res.json();
+  } catch (err) {
+    return {
+      exito: false,
+      mensaje: `Fallo de conexión con el backend: ${(err as Error).message}`,
+    };
+  }
+}
+
+// US2: Alta de Usuarios (POST /api/admin/usuarios)
+export async function crearUsuarioApi(
+  usuario: string,
+  contrasena: string,
+  rol: string,
+  adminId?: number
+): Promise<LoginResponse> {
+  try {
+    const res = await fetch(`${API_BASE_URL}/admin/usuarios`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ usuario, contrasena, rol, adminId }),
+    });
+    return await res.json();
+  } catch (err) {
+    return {
+      exito: false,
+      mensaje: `Fallo al registrar usuario: ${(err as Error).message}`,
+    };
+  }
+}
+
+// US3: Consulta de Trazabilidad / Auditoría (GET /api/admin/logs)
+export async function getLogsAuditoria(limite: number = 50): Promise<LogItem[]> {
+  try {
+    const res = await fetch(`${API_BASE_URL}/admin/logs?limite=${limite}`, {
+      cache: "no-store",
+    });
+    if (res.ok) {
+      const data = await res.json();
+      return data.logs || [];
+    }
+  } catch (err) {
+    console.warn("Error consultando logs de auditoría:", err);
+  }
+  return [];
+}
+
+// Migración de datos (POST /api/migracion/csv-a-bd)
+export async function ejecutarMigracionBD(): Promise<{
+  exito: boolean;
+  mensaje: string;
+  totalRegistros?: number;
+}> {
+  try {
+    const res = await fetch(`${API_BASE_URL}/migracion/csv-a-bd`, {
+      method: "POST",
+    });
+    const data = await res.json();
+    return {
+      exito: res.ok,
+      mensaje: data.mensaje || "Migración finalizada con éxito",
+      totalRegistros: data.totalRegistros,
+    };
+  } catch (err) {
+    return {
+      exito: false,
+      mensaje: `Fallo ejecutando la migración: ${(err as Error).message}`,
+    };
+  }
 }
