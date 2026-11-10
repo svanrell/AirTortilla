@@ -210,22 +210,29 @@ public class Login
     // Comprueba si no hay usuarios en la BD y crea el admin inicial por defecto
     public static async Task AsegurarAdminPorDefectoAsync()
     {
-        await using var conn = new NpgsqlConnection(ConfiguracionBD.CadenaConexion);
-        await conn.OpenAsync();
-
-        const string countQuery = "SELECT COUNT(*) FROM usuarios;";
-        await using var cmd = new NpgsqlCommand(countQuery, conn);
-        long count = Convert.ToInt64(await cmd.ExecuteScalarAsync());
-
-        if (count == 0)
+        try
         {
-            Console.WriteLine("[SEGURIDAD] Base de datos limpia. Creando Administrador por defecto: 'admin'...");
-            await DarDeAltaUsuarioAsync(new CrearUsuarioRequest(
-                Usuario: "admin",
-                Contrasena: "Admin123!",
-                Rol: "ADMINISTRADOR"
-            ));
-            Console.WriteLine("[SEGURIDAD] Cuenta creada: usuario='admin' | pass='Admin123!' (Cifrada con BCrypt)");
+            await using var conn = new NpgsqlConnection(ConfiguracionBD.CadenaConexion);
+            await conn.OpenAsync();
+
+            const string countQuery = "SELECT COUNT(*) FROM usuarios;";
+            await using var cmd = new NpgsqlCommand(countQuery, conn);
+            long count = Convert.ToInt64(await cmd.ExecuteScalarAsync());
+
+            if (count == 0)
+            {
+                Console.WriteLine("[SEGURIDAD] Base de datos limpia. Creando Administrador por defecto: 'admin'...");
+                await DarDeAltaUsuarioAsync(new CrearUsuarioRequest(
+                    Usuario: "admin",
+                    Contrasena: "Admin123!",
+                    Rol: "ADMINISTRADOR"
+                ));
+                Console.WriteLine("[SEGURIDAD] Cuenta creada: usuario='admin' | pass='Admin123!' (Cifrada con BCrypt)");
+            }
+        }
+        catch (Exception ex)
+        {
+            Console.WriteLine($"[AVISO BD] No se pudo conectar a la base de datos al iniciar ({ex.Message}). Asegúrate de haber ejecutado 'docker compose up -d'.");
         }
     }
 
