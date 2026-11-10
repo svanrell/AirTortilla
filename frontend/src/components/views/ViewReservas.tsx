@@ -6,10 +6,8 @@ import {
   Search, 
   Filter, 
   Plane, 
-  MapPin, 
   Calendar, 
   Hash, 
-  User, 
   Mail, 
   Sparkles, 
   Layers,
@@ -17,7 +15,6 @@ import {
   AlertCircle,
   TrendingUp,
   Globe,
-  Radio,
   X
 } from "lucide-react";
 

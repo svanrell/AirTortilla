@@ -4,10 +4,6 @@ import React, { useState } from "react";
 import { generarFicherosTotal, generarFicherosLinea } from "@/lib/api";
 import { 
   Terminal, 
-  Layers, 
-  Activity, 
-  CheckCircle2, 
-  AlertCircle, 
   ArrowRight, 
   FileText, 
   Play, 
@@ -15,7 +11,6 @@ import {
   RefreshCw,
   Cpu,
   Zap,
-  Sparkles,
   FileSpreadsheet,
   Trash2
 } from "lucide-react";

@@ -4,12 +4,10 @@ import React, { useState } from "react";
 import { loginApi } from "@/lib/api";
 import { UsuarioAuth } from "@/types";
 import {
-  Lock,
   User,
   KeyRound,
   AlertCircle,
   CheckCircle2,
-  ShieldCheck,
   Plane,
   Sparkles,
   ArrowRight,

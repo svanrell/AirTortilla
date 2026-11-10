@@ -3,8 +3,6 @@
 import React, { useState } from "react";
 import { CasoCoincidente } from "@/types";
 import { 
-  Users, 
-  MapPin, 
   Calendar, 
   Key, 
   ShieldCheck, 
@@ -13,20 +11,13 @@ import {
   Copy,
   Check,
   Plane,
-  Ticket,
-  ChevronRight
+  Ticket
 } from "lucide-react";
 
 interface ViewCoincidentesProps {
   casos: CasoCoincidente[];
   isLive: boolean;
 }
-
-const COUNTRY_FLAGS: Record<string, string> = {
-  FR: "🇫🇷",
-  IT: "🇮🇹",
-  DE: "🇩🇪",
-};
 
 export default function ViewCoincidentes({ casos, isLive }: ViewCoincidentesProps) {
   const [copiedKey, setCopiedKey] = useState<string | null>(null);
